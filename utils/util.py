@@ -11,7 +11,7 @@ import cv2
 import os
 
 class SetWSI(Dataset):
-    def __init__(self, slide_path, target_mpp, target_size, overlap=0, return_loc=False, shuffle=False, mode='inference'):
+    def __init__(self, slide_path, target_mpp, target_size, overlap=0, return_loc=False, shuffle=False, mode='inference', save_true=False, save_dir=''):
         self.slide_path      = slide_path
         self.slide_name      = '.'.join(os.path.split(self.slide_path)[-1].split('.')[:-1])
         self.target_mpp      = target_mpp
@@ -27,6 +27,10 @@ class SetWSI(Dataset):
         self.shuffle         = shuffle
         self.return_loc      = return_loc
         self.mode = mode
+        self.save_true = save_true
+        self.save_dir = save_dir
+        if self.save_true:
+            os.makedirs(save_dir, exist_ok=True)  
         self._init_property()
         self._init_thumbnail()
         self._init_grid()
@@ -90,6 +94,9 @@ class SetWSI(Dataset):
         tile = np.array(self.dzi.get_tile(self.dzi_lv, tile_loc).convert("RGB")).astype(np.uint8)
         tile = self.transform(image=tile)['image']
         
+        if self.save_true:
+            cv2.imwrite(f'{self.save_dir}/{self.slide_name}_{tile_loc[0]}_{tile_loc[1]}.png', np.array(tile.permute(1,2,0))*255)
+
         if self.return_loc is True:
             return (tile, str(tile_loc))
         

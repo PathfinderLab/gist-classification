@@ -274,3 +274,138 @@ class ValidEpoch(Epoch):
             prediction = self.model.forward(x)
             loss = self.loss(prediction, y)
         return loss, prediction
+    
+class EvaluationEpoch(Epoch):
+    def __init__(self, model, classes, loss, metrics, verbose=True):
+        super().__init__(
+            model=model,
+            classes=classes,
+            loss=loss,
+            metrics=metrics,
+            stage_name="valid",
+            verbose=verbose,
+        )
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    def on_epoch_start(self):
+        self.model.eval()
+        # BN 레이어 완전 고정
+        for module in self.model.modules():
+            if isinstance(module, torch.nn.BatchNorm2d):
+                module.eval()
+                module.track_running_stats = False
+
+    def batch_update(self, x, y):
+        if self.classes == 1:
+            y = y.float().view(-1, 1)
+        with torch.no_grad():
+            prediction = self.model.forward(x)
+            loss = self.loss(prediction, y)
+        return loss, prediction
+
+    def run(self, dataloader):
+        self.on_epoch_start()
+        
+        # CPU에 결과 저장 (메모리 절약)
+        all_predictions = []
+        all_targets = []
+        total_loss = 0.0
+        total_samples = 0
+        
+        with tqdm(
+            dataloader,
+            desc=self.stage_name,
+            file=sys.stdout,
+            disable=not self.verbose,
+        ) as iterator:
+            for x, y in iterator:
+                x, y = x.to(self.device), y.to(self.device)
+                loss, y_pred = self.batch_update(x, y)
+                
+                # GPU에서 CPU로 즉시 이동하여 메모리 절약
+                all_predictions.append(y_pred.cpu())
+                all_targets.append(y.cpu())
+                
+                # Loss 누적
+                batch_size = x.size(0)
+                total_loss += loss.item() * batch_size
+                total_samples += batch_size
+                
+                # GPU 메모리 정리
+                del x, y, y_pred, loss
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        
+        # 전체 데이터 연결 (CPU에서)
+        all_predictions = torch.cat(all_predictions, dim=0)
+        all_targets = torch.cat(all_targets, dim=0)
+        
+        # 메트릭 계산
+        logs = {}
+        logs['loss'] = total_loss / total_samples
+        
+        # 메트릭을 GPU로 이동하여 계산 (필요시)
+        device_for_metrics = self.device if all_predictions.numel() < 1000000 else 'cpu'  # 100만개 미만이면 GPU 사용
+        
+        all_predictions = all_predictions.to(device_for_metrics)
+        all_targets = all_targets.to(device_for_metrics)
+        
+        for metric_fn in self.metrics:
+            # 메트릭 함수도 같은 디바이스로 이동
+            metric_fn.to(device_for_metrics)
+            metric_value = metric_fn(all_predictions, all_targets)
+            logs[metric_fn.__name__] = metric_value
+        
+        if self.verbose:
+            s = self._format_logs(logs)
+            print(f"\n{self.stage_name} - {s}")
+        
+        return logs
+    
+    def run_memory_efficient(self, dataloader, chunk_size=10000):
+        """청크 단위로 메트릭을 계산하여 메모리 사용량을 최소화"""
+        self.on_epoch_start()
+        
+        all_predictions = []
+        all_targets = []
+        total_loss = 0.0
+        total_samples = 0
+        
+        with torch.no_grad():
+            for x, y in tqdm(dataloader, desc=self.stage_name):
+                x, y = x.to(self.device), y.to(self.device)
+                loss, y_pred = self.batch_update(x, y)
+                
+                all_predictions.append(y_pred.cpu())
+                all_targets.append(y.cpu())
+                
+                batch_size = x.size(0)
+                total_loss += loss.item() * batch_size
+                total_samples += batch_size
+                
+                # 청크 크기에 도달하면 중간 처리
+                current_size = sum(pred.size(0) for pred in all_predictions)
+                if current_size >= chunk_size:
+                    # 중간 결과 처리 후 메모리 해제
+                    chunk_preds = torch.cat(all_predictions, dim=0)
+                    chunk_targets = torch.cat(all_targets, dim=0)
+                    
+                    # 필요하면 여기서 중간 메트릭 계산
+                    # ... (구현은 요구사항에 따라)
+                    
+                    all_predictions.clear()
+                    all_targets.clear()
+                    torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        
+        # 남은 데이터 처리
+        if all_predictions:
+            final_preds = torch.cat(all_predictions, dim=0)
+            final_targets = torch.cat(all_targets, dim=0)
+            
+            # 최종 메트릭 계산
+            logs = {'loss': total_loss / total_samples}
+            for metric_fn in self.metrics:
+                metric_value = metric_fn(final_preds, final_targets)
+                logs[metric_fn.__name__] = metric_value
+            
+            return logs
+

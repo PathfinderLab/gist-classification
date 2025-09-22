@@ -30,16 +30,13 @@ class TensorData(Dataset):
         return x_data, y_data
 
 
-def dataloader_setting(train_path, valid_path, test_path, nor_sch_path, nor_lei_path, lei_sch_path, cutmix, imb_sampler, batch_size):
+def train_dataloader_setting(train_path, valid_path, nor_sch_path, nor_lei_path, lei_sch_path, cutmix, imb_sampler, batch_size, augmentation):
     # Path Setting    
     with open(train_path, 'rb') as fr:
         train_zip = pickle.load(fr)
     with open(valid_path, 'rb') as fr:
         valid_zip = pickle.load(fr)
-    with open(test_path, 'rb') as fr:
-        test_zip = pickle.load(fr) 
 
-    print(cutmix)
     if cutmix:
         with open(nor_sch_path, 'rb') as fr:
             n_s = pickle.load(fr)
@@ -54,9 +51,8 @@ def dataloader_setting(train_path, valid_path, test_path, nor_sch_path, nor_lei_
         pass
     
     train_zip = shuffle(train_zip)
-    train_data = TensorData(train_zip, augmentation=True)
+    train_data = TensorData(train_zip, augmentation=augmentation)
     valid_data = TensorData(valid_zip)
-    test_data = TensorData(test_zip)
     
     sampler = ImbalancedDatasetSampler(train_data) if imb_sampler else None
     # DataLoader Setting
@@ -79,6 +75,12 @@ def dataloader_setting(train_path, valid_path, test_path, nor_sch_path, nor_lei_
         prefetch_factor = 2*4,
         drop_last       = True
     )
+    return train_loader, valid_loader
+
+def test_dataloader_setting(test_path, batch_size):
+    with open(test_path, 'rb') as fr:
+        test_zip = pickle.load(fr) 
+    test_data = TensorData(test_zip)
     test_loader = torch.utils.data.DataLoader(
         dataset         = test_data,
         batch_size      = batch_size,
@@ -88,8 +90,7 @@ def dataloader_setting(train_path, valid_path, test_path, nor_sch_path, nor_lei_
         prefetch_factor = 2*4,
         drop_last       = True
     )
-    return train_loader, valid_loader, test_loader
-
+    return test_loader
 
 def train_aug():
     ret = A.Compose(

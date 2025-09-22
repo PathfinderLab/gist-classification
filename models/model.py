@@ -7,25 +7,14 @@ from torch.utils import model_zoo
 
 from torchvision import models
 
-class ModelSetting(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.pre_trained = model
-        self.last_layer  = nn.Linear(1000, 4)
-        
-    def forward(self, x):
-        x = self.pre_trained(x)
-        x = self.last_layer(x)
-        return x
-
 def resnet50():
     model = models.resnet50(pretrained=True)
-    model = ModelSetting(model)
+    model.fc = nn.Linear(model.fc.in_features, 4)
     return model
 
 def swin_transformer_tiny():
     model = models.swin_t(weights='IMAGENET1K_V1')
-    model = ModelSetting(model)
+    model.head = nn.Linear(model.head.in_features, 4)
     return model
 
 def se_resnext101_32x4d():
