@@ -1,7 +1,5 @@
 # GIST-classification
-CutMix-Augmented Classification for Balancing Tumor Subtypes in Gastric Cancer: A Novel Approach to
-Address Class Imbalance
-
+Subtype Classification of Gastric Spindle Cell Tumors in Whole Slide Images
 
 ## Abstract
 **Aims**: Accurate cancer subtype classification is critical due to variations in tumor progression and prognosis. Traditionally, pathologists classified subtypes manually by examining pathological slides under the microscope. To address increasing workloads, this study aimed to classify gastric spindle cell tumor subtypes (GSCT)—gastrointestinal stromal tumors (GIST), leiomyomas, and schwannomas—using a convoluted neural network applied to whole-slide images (WSIs).  
