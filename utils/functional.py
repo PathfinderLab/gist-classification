@@ -289,7 +289,7 @@ class EvaluationEpoch(Epoch):
 
     def on_epoch_start(self):
         self.model.eval()
-        # BN 레이어 완전 고정
+        # Completely freeze BN layers
         for module in self.model.modules():
             if isinstance(module, torch.nn.BatchNorm2d):
                 module.eval()
@@ -306,7 +306,7 @@ class EvaluationEpoch(Epoch):
     def run(self, dataloader):
         self.on_epoch_start()
         
-        # CPU에 결과 저장 (메모리 절약)
+        # Store results on CPU (memory saving)
         all_predictions = []
         all_targets = []
         total_loss = 0.0
@@ -322,35 +322,35 @@ class EvaluationEpoch(Epoch):
                 x, y = x.to(self.device), y.to(self.device)
                 loss, y_pred = self.batch_update(x, y)
                 
-                # GPU에서 CPU로 즉시 이동하여 메모리 절약
+                # Immediately move from GPU to CPU to save memory
                 all_predictions.append(y_pred.cpu())
                 all_targets.append(y.cpu())
                 
-                # Loss 누적
+                # Accumulate loss
                 batch_size = x.size(0)
                 total_loss += loss.item() * batch_size
                 total_samples += batch_size
                 
-                # GPU 메모리 정리
+                # Clean up GPU memory
                 del x, y, y_pred, loss
                 torch.cuda.empty_cache() if torch.cuda.is_available() else None
         
-        # 전체 데이터 연결 (CPU에서)
+        # Concatenate all data (on CPU)
         all_predictions = torch.cat(all_predictions, dim=0)
         all_targets = torch.cat(all_targets, dim=0)
         
-        # 메트릭 계산
+        # Calculate metrics
         logs = {}
         logs['loss'] = total_loss / total_samples
         
-        # 메트릭을 GPU로 이동하여 계산 (필요시)
+        # Move to GPU for metric calculation (if needed)
         device_for_metrics = self.device if all_predictions.numel() < 1000000 else 'cpu'  # 100만개 미만이면 GPU 사용
         
         all_predictions = all_predictions.to(device_for_metrics)
         all_targets = all_targets.to(device_for_metrics)
         
         for metric_fn in self.metrics:
-            # 메트릭 함수도 같은 디바이스로 이동
+            # Move metric function to same device
             metric_fn.to(device_for_metrics)
             metric_value = metric_fn(all_predictions, all_targets)
             logs[metric_fn.__name__] = metric_value
@@ -362,7 +362,7 @@ class EvaluationEpoch(Epoch):
         return logs
     
     def run_memory_efficient(self, dataloader, chunk_size=10000):
-        """청크 단위로 메트릭을 계산하여 메모리 사용량을 최소화"""
+        """Calculate metrics in chunks to minimize memory usage"""
         self.on_epoch_start()
         
         all_predictions = []
@@ -382,26 +382,23 @@ class EvaluationEpoch(Epoch):
                 total_loss += loss.item() * batch_size
                 total_samples += batch_size
                 
-                # 청크 크기에 도달하면 중간 처리
+                # Process intermediate chunks when reaching chunk size
                 current_size = sum(pred.size(0) for pred in all_predictions)
                 if current_size >= chunk_size:
-                    # 중간 결과 처리 후 메모리 해제
+                    # Process intermediate results and free memory
                     chunk_preds = torch.cat(all_predictions, dim=0)
                     chunk_targets = torch.cat(all_targets, dim=0)
-                    
-                    # 필요하면 여기서 중간 메트릭 계산
-                    # ... (구현은 요구사항에 따라)
                     
                     all_predictions.clear()
                     all_targets.clear()
                     torch.cuda.empty_cache() if torch.cuda.is_available() else None
         
-        # 남은 데이터 처리
+        # Process remaining data
         if all_predictions:
             final_preds = torch.cat(all_predictions, dim=0)
             final_targets = torch.cat(all_targets, dim=0)
             
-            # 최종 메트릭 계산
+            # Calculate final metrics
             logs = {'loss': total_loss / total_samples}
             for metric_fn in self.metrics:
                 metric_value = metric_fn(final_preds, final_targets)
