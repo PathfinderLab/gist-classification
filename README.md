@@ -17,8 +17,8 @@ The classification of cancer subtypes has significant importance due to the vari
 - `data_prepare/`: patch generation and offline cutmix augmentation directory
 - `evaluation/`: patch-wise and slide-wise evaluation directory
 - `img/`: img directory
-- `mil/`: mil model training directory
-- `model/`: model directory
+- `modelㄴ/`: model directory
+- `sample/`: sample dataset directory
 - `training/`: our model training directory
 - `utils/`: utils for training and inference directory
 - `run.py`: automated pipeline for GSCT WSIs subtype 
