@@ -62,4 +62,4 @@ class PatchProcessor(object):
     # save patch method
     def save_image(self, dir_path, file_name, img):
         os.makedirs(dir_path, exist_ok = True)
-        cv2.imwrite(os.path.join(dir_path, file_name), img)
+        cv2.imwrite(os.path.join(dir_path, file_name), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))

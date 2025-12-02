@@ -23,7 +23,7 @@ class TensorData(Dataset):
         
     def __getitem__(self, index):
         img_path = self.image_path[index]
-        batch_x = cv2.imread(img_path).astype(np.float32)/255
+        batch_x = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_RGB2BGR).astype(np.float32)/255
         sample = self.augmentation(image=batch_x)
         x_data = sample['image']
         y_data = self.label[index].to(torch.float32)

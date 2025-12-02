@@ -1,5 +1,5 @@
 from tqdm                                       import tqdm
-from torchmetrics.functional                    import accuracy, f1_score
+from torchmetrics.functional                    import accuracy, f1_score, precision
 import torch.nn                                 as nn
 import numpy                                    as np
 import torch
@@ -115,6 +115,48 @@ class Fscore(BaseObject):
         prediction = torch.argmax(self.m(prediction), dim=1)
         f1  = f1_score(prediction, y, 'multiclass', num_classes=self.classes, average=None)
         return f1[self.targets].float().mean().item()
+
+
+class WeightedPrecision(BaseObject):
+    def __init__(self, classes, **kwargs):
+        super().__init__(**kwargs)
+        self.classes = classes
+        self.m       = nn.Softmax(dim=1)
+        self._name   = 'weighted_precision' 
+
+    def forward(self, prediction, y):
+        # one-hot → label
+        y = torch.argmax(y, dim=1)
+        prediction = torch.argmax(self.m(prediction), dim=1)
+        prec = precision(
+            prediction,
+            y,
+            task='multiclass',
+            num_classes=self.classes,
+            average='weighted'
+        )
+        return prec.float().mean().item()
+
+
+class WeightedF1(BaseObject):
+    def __init__(self, classes, **kwargs):
+        super().__init__(**kwargs)
+        self.classes = classes
+        self.m       = nn.Softmax(dim=1)
+        self._name   = 'weighted_f1' 
+
+    def forward(self, prediction, y):
+        # one-hot → label
+        y = torch.argmax(y, dim=1)
+        prediction = torch.argmax(self.m(prediction), dim=1)
+        f1 = f1_score(
+            prediction,
+            y,
+            task='multiclass',
+            num_classes=self.classes,
+            average='weighted'
+        )
+        return f1.float().mean().item()
 
 
 
@@ -405,4 +447,3 @@ class EvaluationEpoch(Epoch):
                 logs[metric_fn.__name__] = metric_value
             
             return logs
-

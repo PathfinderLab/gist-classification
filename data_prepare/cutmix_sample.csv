@@ -1,0 +1,3 @@
+normal_path,leiomyoma_path,schwannoma_path
+../sample/patch/leiomyoma/1_1.png,../sample/patch/leiomyoma/2_2.png,../sample/patch/schwannoma/2_2.png
+../sample/patch/schwannoma/3_1.png,../sample/patch/leiomyoma/3_2.png,../sample/patch/schwannoma/1_2.png

@@ -95,7 +95,7 @@ class SetWSI(Dataset):
         tile = self.transform(image=tile)['image']
         
         if self.save_true:
-            cv2.imwrite(f'{self.save_dir}/{self.slide_name}_{tile_loc[0]}_{tile_loc[1]}.png', np.array(tile.permute(1,2,0))*255)
+            cv2.imwrite(f'{self.save_dir}/{self.slide_name}_{tile_loc[0]}_{tile_loc[1]}.png', cv2.cvtColor(np.array(tile.permute(1,2,0))*255, cv2.COLOR_RGB2BGR))
 
         if self.return_loc is True:
             return (tile, str(tile_loc))

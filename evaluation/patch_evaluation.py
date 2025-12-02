@@ -4,7 +4,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 from models.model                                            import resnet50, swin_transformer_tiny, se_resnext101_32x4d
-from utils.functional                                        import Accuracy, Fscore, EvaluationEpoch
+from utils.functional                                        import Accuracy, Fscore, WeightedPrecision, WeightedF1, EvaluationEpoch
 from utils.datagen                                           import test_dataloader_setting
 import torch.nn                                              as nn
 import segmentation_models_pytorch                           as smp
@@ -33,7 +33,7 @@ def test_dataset(model_name, model_save_path, test_path, classes, batch_size, lo
 
     # loss, metrics, optimizer and schduler setting
     loss = getattr(nn, loss)() if loss == 'CrossEntropyLoss' else getattr(smp.losses, loss)(mode='multilabel')
-    metrics = [Accuracy(classes), Fscore(classes,0), Fscore(classes,1), Fscore(classes,2), Fscore(classes,3)]
+    metrics = [Accuracy(classes), WeightedF1(classes), WeightedPrecision(classes), Fscore(classes,0), Fscore(classes,1), Fscore(classes,2), Fscore(classes,3)]
     model = model_setting(model_name)
     model.load_state_dict(torch.load(model_save_path), strict=True)
     model.eval()
