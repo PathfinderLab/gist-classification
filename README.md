@@ -25,7 +25,7 @@ The classification of cancer subtypes has significant importance due to the vari
 
 ### inference example
 
-Pretrained model weights, an anonymized example WSI, and a corresponding **coarse ROI-level XML annotation** used in this repository can be downloaded from [Google Drive](<https://drive.google.com/drive/folders/1YqY-z4awUBLjuU6X64j-1zq-kLw4UWyM?usp=drive_link>).  
+Pretrained model weights, an anonymized example WSI, and a corresponding **coarse ROI-level XML annotation** used in this repository can be downloaded from [Google Drive](<https://drive.google.com/drive/folders/1mPNHhik41d8YuscOifX9MnoADBT04Kzs?usp=sharing>).  
 The XML file provides a simplified region-of-interest annotation that is sufficient to demonstrate the patch-generation pipeline and is **not intended as precise pixel-wise ground truth**.
 
 After downloading, save the model weight file (e.g., `resnet50_aug_cutmix2.pth`) in your working directory (or provide its path via `-model_path`), and place the example WSI file **together with its XML annotation** in `./sample/wsi/` (or update `-slide_path` accordingly) before running the command below.
